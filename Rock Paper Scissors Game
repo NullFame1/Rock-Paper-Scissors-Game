@@ -8,6 +8,7 @@
 <body>
   <h1 align="center">Rock Paper Scissors Game</h1>
   <p align="center">Bet Amount: <span id="betAmount"></span> ETH</p>
+  <p id="gameHistory" align="center">Game history:</p>
   <p align="center">Choose your option:</p>
   <div align="center">
     <select id="userChoice">
@@ -20,87 +21,98 @@
   <p id="gameResult" align="center"></p>
   <script src="https://cdn.jsdelivr.net/npm/web3@1.6.0/dist/web3.min.js"></script>
   <script>
-    const contractAddress = '0x40B8185c11C1ec3079bB8D771a1F2107e36603E6';
-    const contractABI = [
-      {
-        "constant": false,
-        "inputs": [
-          {
-            "name": "_option",
-            "type": "uint8"
-          }
-        ],
-        "name": "coinFlip",
-        "outputs": [
-          {
-            "name": "",
-            "type": "bool"
-          }
-        ],
-        "payable": true,
-        "stateMutability": "payable",
-        "type": "function"
-      },
-      {
-        "constant": true,
-        "inputs": [],
-        "name": "betAmount",
-        "outputs": [
-          {
-            "name": "",
-            "type": "uint256"
-          }
-        ],
-        "payable": false,
-        "stateMutability": "view",
-        "type": "function"
-      }
-    ];
-
-    let web3 = new Web3(Web3.givenProvider);
-    let contractInstance = new web3.eth.Contract(contractABI, contractAddress);
-    let betAmount = 0.0001; // Сумма ставки в ETH
-
-    async function playGame() {
-      const userChoice = document.getElementById('userChoice').value;
-      const options = ['0', '1', '2']; // Rock, Scissors, Paper
-      if (!options.includes(userChoice)) {
-        alert("Invalid choice. Choose only 0 (Rock), 1 (Scissors), or 2 (Paper)");
-        return;
-      }
-
-      const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-      const account = accounts[0];
-
-      try {
-        const result = await contractInstance.methods.coinFlip(parseInt(userChoice)).send({ from: account, value: web3.utils.toWei(betAmount.toString(), 'ether') });
-        console.log(result);
-        displayResult(result.events.GameResult.returnValues.win);
-      } catch (error) {
-        console.error(error);
-        alert("An error occurred while playing the game.");
-      }
-    }
-
-    function displayResult(win) {
-      const resultElement = document.getElementById('gameResult');
-      if (win) {
-        resultElement.textContent = "Congratulations! You won.";
-      } else {
-        resultElement.textContent = "Oops! You lost. Try again.";
-      }
-    }
-
     window.addEventListener('load', async () => {
-      const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+      if (typeof window.ethereum !== 'undefined') {
+        await window.ethereum.enable();
+        startApp();
+      } else {
+        alert('Please install MetaMask to use this application.');
+      }
+    });
+
+    async function startApp() {
+      const contractAddress = '0x40B8185c11C1ec3079bB8D771a1F2107e36603E6';
+      const contractABI = [
+        {
+          "constant": false,
+          "inputs": [
+            {
+              "name": "_option",
+              "type": "uint8"
+            }
+          ],
+          "name": "coinFlip",
+          "outputs": [
+            {
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "payable": true,
+          "stateMutability": "payable",
+          "type": "function"
+        },
+        {
+          "constant": true,
+          "inputs": [],
+          "name": "betAmount",
+          "outputs": [
+            {
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "payable": false,
+          "stateMutability": "view",
+          "type": "function"
+        }
+      ];
+
+      const web3 = new Web3(window.ethereum);
+      const contractInstance = new web3.eth.Contract(contractABI, contractAddress);
+      let betAmount = 0.0001; // Сумма ставки в ETH
+
+      const accounts = await web3.eth.requestAccounts();
       const account = accounts[0];
 
       // Получаем текущую сумму ставки из смарт-контракта
       const currentBetAmount = await contractInstance.methods.betAmount().call();
       document.getElementById('betAmount').textContent = web3.utils.fromWei(currentBetAmount, 'ether');
-    });
-  </script>
 
-  
+      async function playGame() {
+        const userChoice = document.getElementById('userChoice').value;
+        const options = ['0', '1', '2']; // Rock, Scissors, Paper
+        if (!options.includes(userChoice)) {
+          alert("Invalid choice. Choose only 0 (Rock), 1 (Scissors), or 2 (Paper)");
+          return;
+        }
+
+        try {
+          const result = await contractInstance.methods.coinFlip(parseInt(userChoice)).send({ from: account, value: web3.utils.toWei(betAmount.toString(), 'ether') });
+          console.log(result);
+          displayResult(result.events.GameResult.returnValues.win);
+          updateGameHistory(result.events.GameResult.returnValues.win);
+        } catch (error) {
+          console.error(error);
+          alert("An error occurred while playing the game.");
+        }
+      }
+
+      function displayResult(win) {
+        const resultElement = document.getElementById('gameResult');
+        if (win) {
+          resultElement.textContent = "Congratulations! You won.";
+        } else {
+          resultElement.textContent = "Oops! You lost. Try again.";
+        }
+      }
+
+      function updateGameHistory(win) {
+        const gameHistoryElement = document.getElementById('gameHistory');
+        const result = win ? "Win" : "Loss";
+        gameHistoryElement.textContent += `\nGame result: ${result}`;
+      }
+    }
+  </script>
 </body>
 </html>
