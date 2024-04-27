@@ -10,13 +10,16 @@
   <p align="center">Bet Amount: <span id="betAmount"></span> ETH</p>
   <p align="center">Choose your option:</p>
   <div align="center">
-    <button onclick="playGame(0)">Rock</button>
-    <button onclick="playGame(1)">Scissors</button>
-    <button onclick="playGame(2)">Paper</button>
+    <select id="userChoice">
+      <option value="0">Rock</option>
+      <option value="1">Scissors</option>
+      <option value="2">Paper</option>
+    </select>
+    <button onclick="playGame()">Play</button>
   </div>
   <p id="gameResult" align="center"></p>
   <script>
-    const contractAddress = 'YOUR_CONTRACT_ADDRESS'; // Замените на адрес вашего смарт-контракта
+    const contractAddress = '0x40B8185c11C1ec3079bB8D771a1F2107e36603E6';
     const contractABI = [
       {
         "constant": false,
@@ -36,6 +39,20 @@
         "payable": true,
         "stateMutability": "payable",
         "type": "function"
+      },
+      {
+        "constant": true,
+        "inputs": [],
+        "name": "betAmount",
+        "outputs": [
+          {
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "payable": false,
+        "stateMutability": "view",
+        "type": "function"
       }
     ];
 
@@ -45,8 +62,8 @@
 
     async function playGame() {
       const userChoice = document.getElementById('userChoice').value;
-      const options = [0, 1, 2]; // Rock, Scissors, Paper
-      if (!options.includes(parseInt(userChoice))) {
+      const options = ['0', '1', '2']; // Rock, Scissors, Paper
+      if (!options.includes(userChoice)) {
         alert("Invalid choice. Choose only 0 (Rock), 1 (Scissors), or 2 (Paper)");
         return;
       }
@@ -55,7 +72,7 @@
       const account = accounts[0];
 
       try {
-        const result = await contractInstance.methods.coinFlip(userChoice).send({ from: account, value: web3.utils.toWei(betAmount.toString(), 'ether') });
+        const result = await contractInstance.methods.coinFlip(parseInt(userChoice)).send({ from: account, value: web3.utils.toWei(betAmount.toString(), 'ether') });
         console.log(result);
         displayResult(result.events.GameResult.returnValues.win);
       } catch (error) {
